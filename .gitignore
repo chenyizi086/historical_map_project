@@ -1,0 +1,11 @@
+# Ignore odt file
+*.odt
+
+# Ignore VGG weight file
+conv_feature_extraction/*.h5
+
+# Ignore Sample data
+image_generator/sample
+
+# Ignore pyache file
+image_pre_analyzed/__pyache__
