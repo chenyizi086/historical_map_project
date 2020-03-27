@@ -1,0 +1,51 @@
+Requirement of the superpixels:
+1. Homogeneity: Pixels of a given SP should present similar colors or gray levels
+2. Connected partition: Each SP is made of a single connected component; SP do not overlap
+3. Adherence to object boundaries: Obejct boundaries should be included in SP boundaries
+4. Regularity: SP should form a regular pattern on the image. This property is ofen desirable as it makes the SP more
+convenient to use for subsequent analysis steps.
+
+
+Watershed-based
+    Watshed
+    Compact Watershed
+    Morphological Superpixel Segmentation
+    Water Pixels
+Density-based
+    Edge-Augmented Mean Shift (EAMS)
+    Quick Shift (QS)
+Graph-based
+    Normalized Cuts(NC)
+    Felzenswalb and Huttenlocher (FH)
+    Random Walks (RW)
+    Constant Intensity Superpixels (CIS)
+    Entropy Rate Superpixels (ERS)
+    Boolean Optimization Superpixels
+    proposals for objects from Improved Seeds and Energies
+Contour evolution
+    Turbo Pixels (TP)
+    ERGC (Eikonal Region Growing Clustering)
+Path-based
+    Path Finder (PF)
+    Topology Perserving Superpixels (TPS)
+Clustering-based
+    Simple linear Iterative Clustering (SLIC)
+    Depth-Adaptive-Superpixels (DASP)
+    VCells (VC)
+    Voxel-Cloud Connectivity Segmentation (VCCS)
+    Preemptvie SLIC (preSLIC)
+    Linear Spectral Clustering (LSC)
+Energy Optimization
+    Contour Relaxed Superpixels (CRS)
+    Superpixels Extracted via Energy-Driven Sampling (SEEDS)
+    Convexity Constrained Superpixels (CCS)
+    Extended Topology Preserving Segmentation (ETPS)
+Wavelet-based
+    Edge Avoiding Wavelets (SEAW)
+Deep learning approach
+    Bottom-up unsupervised image segmentation using FC-Dense u-net
+    based deep representation clustering and multidimensional feature
+    fusion based region merging
+
+
+
