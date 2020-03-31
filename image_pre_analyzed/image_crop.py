@@ -7,8 +7,32 @@ import cv2.cv2 as cv2
 from PIL import Image
 import matplotlib.pyplot as plt
 from keras.preprocessing import image
+import image_slicer
 
 
+def create_save_image_batches(path, batch_size=10):
+	# List file names
+	file_names = os.listdir(path)
+	
+	for file in file_names:
+		# Split path and get the filename
+		file_index = file.split('.')[0]
+		# Create target directory & all intermediate directories if don't exists
+		if not os.path.exists(file_index):
+			os.makedirs(file_index)
+			print("Directory ", file_index, " Created ")
+		else:
+			print("Directory ", file_index, " already exists")
+		
+		# Read image
+		dir_save_image_batch = os.getcwd() + '/' + file.split('.')[0]
+		file_orinal_image = path + '/' + file
+		
+		# Slice and save tiles
+		tiles = image_slicer.slice(file_orinal_image, batch_size)
+		image_slicer.save_tiles(tiles, directory=dir_save_image_batch, format='jpeg')
+
+	
 def crop_and_create_image_batches(path, superpixel_image):
 	'''
 	Description: A function to crop image into batches based on superpixel images.
@@ -169,3 +193,8 @@ def plot_image_batch(path):
 		plt.imshow(x)
 	plt.tight_layout(pad=0.4, w_pad=0.5, h_pad=1.0)
 	plt.show()
+
+
+if __name__ == '__main__':
+	path = '/home/yizi/Documents/phd/map/Service-du-Plan-Paris-1929'
+	create_save_image_batches(path)
