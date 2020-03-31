@@ -67,7 +67,7 @@ def median_cut(img, num_colors, unique=False):
 	return [c.average() for c in cubes]
 
 
-def color_quantization(image):
+def color_quantization(image, exe_median_cut=False):
 	# Mean shift
 	def recreate_image(codebook, labels, w, h):
 		"""Recreate the (compressed) image from the code book & labels"""
@@ -98,43 +98,62 @@ def color_quantization(image):
 	labels_unique = np.unique(labels)
 	n_clusters_ = len(labels_unique)
 	
-	image_mean_shift = recreate_image(cluster_centers, labels, image.shape[0], image.shape[1])
+	image_mean_shift = recreate_image(cluster_centers, labels, image.shape[0], image.shape[1]).astype(np.uint8)
 	print("number of estimated clusters : %d" % n_clusters_)
 	
 	h_o, s_o, v_o = cv2.split(image)
 	h_s, s_s, v_s = cv2.split(image_mean_shift)
 	
-	fig = plt.figure(figsize=plt.figaspect(0.5))
-	ax = fig.add_subplot(1, 2, 1, projection='3d')
+	# Normalize color space
+	pixel_colors = image.reshape((np.shape(image)[0] * np.shape(image)[1], 3))
+	norm = colors.Normalize(vmin=-1., vmax=1.)
+	norm.autoscale(pixel_colors)
+	pixel_colors = norm(pixel_colors).tolist()
+	
+	fig = plt.figure(figsize=(25, 25))
+	
+	ax = fig.add_subplot(2, 3, 1)
+	ax.imshow(image)
+	ax.axis('off')
+	ax.set_title('Original image')
+	
+	ax = fig.add_subplot(2, 3, 2)
+	ax.imshow(image_mean_shift)
+	ax.axis('off')
+	ax.set_title('Image after mean shift')
+	
+	ax = fig.add_subplot(2, 3, 4, projection="3d")
+	ax.scatter(h_o.flatten(), s_o.flatten(), v_o.flatten(), facecolors=pixel_colors, marker=".")
+	ax.set_xlabel("Hue")
+	ax.set_ylabel("Saturation")
+	ax.set_zlabel("Value")
+	ax.set_title('Color space of original images')
+	
+	ax = fig.add_subplot(2, 3, 5, projection='3d')
 	ax.scatter(h_o.flatten(), s_o.flatten(), v_o.flatten(), c=label_norm)
 	ax.set_xlabel("Hue")
 	ax.set_ylabel("Saturation")
 	ax.set_zlabel("Value")
-	
-	ax = fig.add_subplot(1, 2, 2, projection='3d')
-	ax.scatter(h_s.flatten(), s_s.flatten(), v_s.flatten(), c=label_norm)
-	ax.set_xlabel("Hue")
-	ax.set_ylabel("Saturation")
-	ax.set_zlabel("Value")
-	plt.show()
-	print()
+	ax.set_title('Color space after mean-shift')
 	
 	# Median cut
-	image_mean_shift_imojbect = Image.fromarray(image_mean_shift.astype(np.uint8))
-	image_median_cut = median_cut(image_mean_shift_imojbect, 3)
-	image_median_cut_h = np.array([imc[0] for imc in image_median_cut])
-	image_median_cut_s = np.array([imc[1] for imc in image_median_cut])
-	image_median_cut_v = np.array([imc[2] for imc in image_median_cut])
-	
-	fig = plt.figure()
-	ax = fig.add_subplot(1, 1, 1, projection='3d')
-	ax.scatter(image_median_cut_h.flatten(), image_median_cut_s.flatten(), image_median_cut_v.flatten())
-	
-	ax.set_xlabel("Hue")
-	ax.set_ylabel("Saturation")
-	ax.set_zlabel("Value")
-	
-	plt.show()
+	# There is no need to do median cut if there are not too many colors
+	if exe_median_cut:
+		image_mean_shift_imojbect = Image.fromarray(image_mean_shift.astype(np.uint8))
+		image_median_cut = median_cut(image_mean_shift_imojbect, 3)
+		image_median_cut_h = np.array([imc[0] for imc in image_median_cut])
+		image_median_cut_s = np.array([imc[1] for imc in image_median_cut])
+		image_median_cut_v = np.array([imc[2] for imc in image_median_cut])
+		
+		fig = plt.figure()
+		ax = fig.add_subplot(1, 1, 1, projection='3d')
+		ax.scatter(image_median_cut_h.flatten(), image_median_cut_s.flatten(), image_median_cut_v.flatten())
+		
+		ax.set_xlabel("Hue")
+		ax.set_ylabel("Saturation")
+		ax.set_zlabel("Value")
+		
+		plt.show()
 
 	# K-Means
 	image_kmeans = image_mean_shift.reshape((image_mean_shift.shape[0] * image_mean_shift.shape[1], image_mean_shift.shape[2]))
@@ -143,26 +162,28 @@ def color_quantization(image):
 	
 	cluster_centers = kmeans.cluster_centers_.astype(np.uint8)
 	image_mean_shift = image_mean_shift.astype(np.uint8)
-	k_means_image = recreate_image(cluster_centers, labels, image_mean_shift.shape[0], image_mean_shift.shape[1])
+	k_means_image = recreate_image(cluster_centers, labels, image_mean_shift.shape[0], image_mean_shift.shape[1]).astype(np.uint8)
 	h_km, s_km, v_km = cv2.split(k_means_image)
 	
-	fig = plt.figure()
-	ax = fig.add_subplot(1, 1, 1, projection='3d')
+	ax = fig.add_subplot(2, 3, 3)
+	ax.imshow(k_means_image)
+	ax.axis('off')
+	ax.set_title('Image after K-means')
 	
+	ax = fig.add_subplot(2, 3, 6, projection='3d')
 	ax.scatter(h_km.flatten(), s_km.flatten(), v_km.flatten(), c=labels)
-	
 	ax.set_xlabel("Hue")
 	ax.set_ylabel("Saturation")
 	ax.set_zlabel("Value")
 	
-	fig = plt.figure()
-	plt.imshow((k_means_image*255).astype(np.uint8))
+	fig.tight_layout()
 	plt.show()
-	print()
-	return k_means_image
+	fig.savefig('map_color_quantization.png', dpi=100)
+	segmentation_image = seperate_layers(k_means_image)
+	return segmentation_image
 
 
-def remove_element(image):
+def seperate_layers(image):
 	image = image.astype(np.uint8)
 	image_set = list(set([tuple(j) for i in image for j in i]))  # find the group of color
 	image_blank = np.zeros((len(image_set), image.shape[0], image.shape[1], image.shape[2])).astype(np.uint8)
@@ -173,28 +194,25 @@ def remove_element(image):
 				if list(image[i][j]) == list(image_set[z]):
 					image_blank[z][i][j] = np.array(image_set[0])
 	
-	fig = plt.figure()
+	fig = plt.figure(figsize=(25, 25))
 	for z in range(len(image_set)):
 		ax = fig.add_subplot(1, len(image_set), z+1)
 		ax.imshow((image_blank[z]*255).astype(np.uint8))
+		ax.axis('off')
+		ax.set_title('Different segmentation %d layers ' % z)
 	plt.show()
+	fig.savefig('map_segmentation.png', dpi=100)
 	return image_blank
 
 
 if __name__ == "__main__":
 	image = cv2.imread('/home/yizi/Documents/phd/map/service-du-plan-Paris-1929/Service-du-Plan-Paris-1929/BHdV_PL_ATL20Ardt_1929_0003.jpg')
+	
+	# Change color space from BGR to RGB to HLS
 	image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-	fig = plt.figure()
-	plt.imshow(np.array(image))
-	plt.show()
 	image = cv2.cvtColor(image, cv2.COLOR_RGB2HLS)
 	
 	image = image[3000: 4000, 3000: 4000]  # Crop the image
 	image = np.array(image)  # Change image objects into array
 	
 	quant_image = color_quantization(image)
-	image_blank = remove_element(quant_image)
-	
-	fig = plt.figure()
-	plt.imshow(np.array(image_blank[0]))
-	plt.show()
