@@ -9,3 +9,12 @@ image_generator/sample
 
 # Ignore pyache file
 image_pre_analyzed/__pyache__
+
+# Ignore xml file
+../.idea/*.xml
+../.idea/*.iml
+
+# Ignore pyc file
+__pycache__/*.pyc
+
+
