@@ -2,21 +2,22 @@ import numpy as np
 
 import cv2.cv2 as cv2
 import matplotlib.pyplot as plt
-import copy
 
 from color_space import color_quantization
 
 
-# TODO: Detect elevation contour
-def detect_elevation_contour(gray_image):
-	print('Start detecting elevation contour in the map.')
+# Detect longitude and latitude
+def detect_longitude_latitude(gray_image):
+	print('Start detecting longitude and latitude')
 	# Detecting horizontal and vertical lines in the images.
 	blank_image_gray = np.zeros((gray_image.shape[0], gray_image.shape[1]), dtype=np.uint8)
 	output_image_gray = np.zeros((gray_image.shape[0], gray_image.shape[1]), dtype=np.uint8)
-	# edges = cv2.Canny(gray_image, 50, 150, apertureSize=3)
+	
+	# Hough transform
 	lines = cv2.HoughLines(gray_image, 1, np.pi / 180, 200)
 	for l in lines:
 		rho, theta = l[0]
+		# Set threshold based on the angle theta
 		if np.abs((np.pi / 2) - theta) < 0.02 or np.abs(0 - theta) < 0.02:
 			a = np.cos(theta)
 			b = np.sin(theta)
@@ -52,11 +53,12 @@ def detect_elevation_contour(gray_image):
 	ax = fig.add_subplot(1, 2, 2)
 	ax.imshow(output_image_gray)
 	ax.axis('off')
-	ax.set_title('Extracted elevation contour')
+	ax.set_title('Extracted longitude and latitude')
 
 	plt.imshow(output_image_gray)
 	plt.show()
-	fig.savefig('elevation_contour.png', dpi=100)
+	fig.savefig('longitude_latitude.png', dpi=100)
+	print('Save figure')
 	return output_image_gray
 
 
@@ -73,4 +75,4 @@ if __name__ == '__main__':
 	RGB_image = cv2.cvtColor(quant_image[1], cv2.COLOR_HLS2BGR)
 	gray_scale_image = cv2.cvtColor(RGB_image, cv2.COLOR_BGR2GRAY)
 	
-	gray_image = detect_elevation_contour(gray_scale_image)
+	gray_image = detect_longitude_latitude(gray_scale_image)
