@@ -1,6 +1,7 @@
 import numpy as np
 import os
 from pathlib import Path
+import operator
 
 import matplotlib.pyplot as plt
 from matplotlib import colors
@@ -112,10 +113,9 @@ def color_quantization(path, exe_median_cut=True, plot=False):
 	n_clusters_ = len(labels_unique)
 	
 	image_mean_shift = recreate_image(cluster_centers, labels, image.shape[0], image.shape[1]).astype(np.uint8)
-	print("Reduce color through K-means: %d" % n_clusters_)
+	print("Reduce color through mean-shift: %d" % n_clusters_)
 	
 	h_o, s_o, v_o = cv2.split(image)
-	h_s, s_s, v_s = cv2.split(image_mean_shift)
 	
 	# Normalize color space
 	pixel_colors = image.reshape((np.shape(image)[0] * np.shape(image)[1], 3))
@@ -245,20 +245,30 @@ def seperate_layers(image, plot=True):
 				if list(image[i][j]) == list(image_set[z]):
 					image_blank[z][i][j] = np.array([255, 255, 255])
 	
+	# Classification layers through
+	image_type = {'Original_image': None, 'red_legend': None, 'black_text': None, 'background': None}
+	number_zeros_pixels = []
+	for index, img in enumerate(image_blank):
+		number_zeros_pixels.append((index, list(img.flatten()).count(0)))
+	
+	number_zeros_pixels.sort(key=operator.itemgetter(1))
+	
+	# Image layer with maximum zeroes should be classified as red-legend or edge pixels
+	# Image layer with second maximum zeroes should be classified as text&lines
+	# Image layer with minimum zeroes should be classified as background
+	image_type['Original_image'] = image
+	image_type['background'] = image_blank[number_zeros_pixels[0][0]]
+	image_type['black_text'] = image_blank[number_zeros_pixels[1][0]]
+	image_type['red_legend'] = image_blank[number_zeros_pixels[2][0]]
+	
 	if plot:
-		image_type = ['Original_image', 'red_legend', 'black_text', 'background']
 		fig = plt.figure(figsize=(25, 25))
 		
-		ax = fig.add_subplot(2, 2, 1)
-		ax.imshow(image)
-		ax.axis('off')
-		ax.set_title('%s layers ' % image_type[0])
-		
-		for it, z in zip(range(1, len(image_type)), range(len(image_set))):
-			ax = fig.add_subplot(2, 2, z+2)
-			ax.imshow(image_blank[z])
+		for index, (type, image) in enumerate(image_type.items()):
+			ax = fig.add_subplot(2, 2, index+1)
+			ax.imshow(image)
 			ax.axis('off')
-			ax.set_title('%s layers ' % image_type[it])
+			ax.set_title('%s_layers ' % type)
 		plt.show()
 	return image_blank
 
