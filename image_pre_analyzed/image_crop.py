@@ -2,15 +2,30 @@
 
 import numpy as np
 import os
+import pickle
 
 import cv2.cv2 as cv2
 from PIL import Image
 import matplotlib.pyplot as plt
 from keras.preprocessing import image
 import image_slicer
+from image_slicer import join
+
+from color_space import color_quantization
 
 
-def create_save_image_batches(path, batch_size=10):
+def create_save_image_batches(path, batch_size=(1000, 1000)):
+	'''
+	Description: Crop and save image batches into files
+	Parameters
+	----------
+	path: image director
+	batch_size: approximate size for each image
+
+	Returns
+	-------
+	None
+	'''
 	# List file names
 	file_names = os.listdir(path)
 	
@@ -24,15 +39,70 @@ def create_save_image_batches(path, batch_size=10):
 		else:
 			print("Directory ", file_index, " already exists")
 		
-		# Read image
-		dir_save_image_batch = os.getcwd() + '/' + file.split('.')[0]
+		# Read image check directory exist or not
+		dir_save_image_batch = os.getcwd() + '/' + str(file.split('.')[0]) + '/image_batches/'
+		if not os.path.exists(dir_save_image_batch):
+			os.makedirs(dir_save_image_batch)
+			print("Directory ", dir_save_image_batch, " Created ")
+		else:
+			print("Directory ", dir_save_image_batch, " already exists")
+		
 		file_orinal_image = path + '/' + file
 		
+		# Get size of image
+		image_shape = np.array(cv2.imread(file_orinal_image)).shape
+		batch_number = int(np.floor(image_shape[0]/batch_size[0])) * int(np.floor(image_shape[1]/batch_size[1]))
+		
 		# Slice and save tiles
-		tiles = image_slicer.slice(file_orinal_image, batch_size)
-		image_slicer.save_tiles(tiles, directory=dir_save_image_batch, format='jpeg')
+		tiles = image_slicer.slice(file_orinal_image, batch_number, save=False)
+		
+		# Join the tiles
+		image = join(tiles)
+		
+		plt.imshow(image)
+		plt.show()
+		
+		# Save tile file in pickle
+		tile_path = './' + file_index + '/tile_info'
+		if not os.path.exists(tile_path):
+			os.makedirs(tile_path)
+			print("Directory ", tile_path, " Created ")
+		else:
+			print("Directory ", tile_path, " already exists")
 
+		tile_file_path = tile_path + '/' + file_index + '_tile.p'
+		image_slicer.save_tiles(tiles, directory=dir_save_image_batch, format='jpeg')
+		pickle.dump(tiles, open(tile_file_path, "wb"))
+
+
+def join_image_batches(path):
+	# Read the tile information
+	tile_file_path = path + 'tile_info/' + os.listdir(path+'tile_info/')[0]
 	
+	# Load the pickles information
+	df = open(tile_file_path, 'rb')
+	tiles = pickle.load(df)
+	
+	# TODO: Replace image file in the tiles
+	image_batches_path = path + 'color_quantization_result_batches/'
+	
+	for index in range(len(os.listdir(image_batches_path))):
+		join_image_bath_path = image_batches_path + os.listdir(image_batches_path)[index] + '/'
+		for t in tiles:
+			t.image = Image.open(join_image_bath_path+t.filename.split('/')[-1])
+			t.filename = join_image_bath_path+t.filename.split('/')[-1]
+		
+		image_join = join(tiles)
+		plt.imshow(image_join)
+		plt.show()
+		print()
+	
+	# Join the tiles into full image
+	image_join = join(tiles)
+	plt.imshow(image_join)
+	plt.show()
+
+
 def crop_and_create_image_batches(path, superpixel_image):
 	'''
 	Description: A function to crop image into batches based on superpixel images.
@@ -196,5 +266,29 @@ def plot_image_batch(path):
 
 
 if __name__ == '__main__':
-	path = '/home/yizi/Documents/phd/map/Service-du-Plan-Paris-1929'
-	create_save_image_batches(path)
+	# Create and save smaller image
+	# path = '/home/yizi/Documents/phd/historical_map_project/test/BHdV_PL_ATL20Ardt_1929_0003.jpg'
+	# img = cv2.imread(path)
+	# img = np.array(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
+	#
+	# plt.imshow(img)
+	# plt.show()
+	#
+	# img = img[3000:5000, 3000:5000]
+	# img = Image.fromarray(img)
+	# img.save('/home/yizi/Documents/phd/historical_map_project/test/BHdV_PL_ATL20Ardt_1929_0003.jpg')
+
+	# 1. crop 2. quantization 3. merge
+	# path = '/home/yizi/Documents/phd/historical_map_project/test/'
+	# create_save_image_batches(path)
+	
+	# 2. quantization
+	path = '/home/yizi/Documents/phd/historical_map_project/image_generator/BHdV_PL_ATL20Ardt_1929_0003/image_batches/'
+	file_names = os.listdir(path)
+	for file in file_names:
+		file_path = path + file
+		quant_image = color_quantization(file_path)
+	
+	# current_dir = os.getcwd() + '/_01_01/'
+	# join_image_batches(current_dir)
+
