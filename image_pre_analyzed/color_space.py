@@ -2,6 +2,7 @@ import numpy as np
 import os
 from pathlib import Path
 import operator
+import pickle
 
 import matplotlib.pyplot as plt
 from matplotlib import colors
@@ -222,11 +223,15 @@ def color_quantization(path, exe_median_cut=True, plot=True):
 		else:
 			print("Directory ", image_quantization_result_dir, " already exists")
 		
-		save_path = image_quantization_result_dir + image_file_name + '.jpg'
+		save_path = image_quantization_result_dir + image_file_name + '.p'
 		
-		# Save image into jpg file
-		im_background = Image.fromarray(segmentation_image[list(segmentation_image.keys())[nl]])
-		im_background.save(save_path)
+		# Save image into pickle file for saving memeory
+		with open(save_path, 'wb') as handle:
+			pickle.dump(segmentation_image[list(segmentation_image.keys())[nl]],
+						handle, protocol=pickle.HIGHEST_PROTOCOL)
+		
+		# sep_image = Image.fromarray(segmentation_image[list(segmentation_image.keys())[nl]])
+		# sep_image.save(save_path, format='RGB')
 	return segmentation_image
 
 
