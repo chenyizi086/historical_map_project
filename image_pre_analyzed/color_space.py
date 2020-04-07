@@ -70,15 +70,13 @@ def median_cut(img, num_colors, unique=False):
 	return [c.average() for c in cubes]
 
 
-def color_quantization(path, exe_median_cut=True, plot=False):
+def color_quantization(path, exe_median_cut=True, plot=True):
 	# Read image by cv2
 	image = cv2.imread(path)
 	image_file_name = os.path.basename(path).split('.')[0]
 	
 	# Change color space from BGR to RGB to HLS
-	image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-	image = cv2.cvtColor(image, cv2.COLOR_RGB2HLS)
-	
+	image = cv2.cvtColor(image, cv2.COLOR_BGR2HLS)
 	image = np.array(image)  # Change image objects into array
 	
 	# Mean shift
@@ -149,7 +147,6 @@ def color_quantization(path, exe_median_cut=True, plot=False):
 		ax.set_ylabel("Saturation")
 		ax.set_zlabel("Value")
 		ax.set_title('Color space after mean-shift')
-	
 	# Median cut
 	# There is no need to do median cut if there are not too many colors
 	if exe_median_cut:
@@ -173,19 +170,19 @@ def color_quantization(path, exe_median_cut=True, plot=False):
 		
 		image_median_cut_h, image_median_cut_l, image_median_cut_s = cv2.split(image_median_cut)
 		
-		fig = plt.figure()
-		ax = fig.add_subplot(1, 1, 1, projection='3d')
-		ax.scatter(image_median_cut_h.flatten(), image_median_cut_l.flatten(), image_median_cut_s.flatten())
+		# fig = plt.figure()
+		# ax = fig.add_subplot(1, 1, 1, projection='3d')
+		# ax.scatter(image_median_cut_h.flatten(), image_median_cut_l.flatten(), image_median_cut_s.flatten())
+		#
+		# ax.set_xlabel("Hue")
+		# ax.set_ylabel("Saturation")
+		# ax.set_zlabel("Value")
 
-		ax.set_xlabel("Hue")
-		ax.set_ylabel("Saturation")
-		ax.set_zlabel("Value")
-
-		plt.show()
 		print("Reduce color through median cut: %d" % len(list(set(image_median_cut_label.flatten()))))
-
+		image_mean_shift = image_median_cut
+		
 	# K-Means
-	image_kmeans = image_mean_shift.reshape((image_median_cut.shape[0] * image_median_cut.shape[1], image_median_cut.shape[2]))
+	image_kmeans = image_mean_shift.reshape((image_mean_shift.shape[0] * image_mean_shift.shape[1], image_mean_shift.shape[2]))
 	kmeans = KMeans(n_clusters=3, random_state=0).fit(image_kmeans)
 	labels = kmeans.predict(image_kmeans)
 	print("Reduce color through K-means: %d" % len(list(set(labels.flatten()))))
@@ -193,6 +190,7 @@ def color_quantization(path, exe_median_cut=True, plot=False):
 	cluster_centers = kmeans.cluster_centers_.astype(np.uint8)
 	image_mean_shift = image_mean_shift.astype(np.uint8)
 	k_means_image = recreate_image(cluster_centers, labels, image_mean_shift.shape[0], image_mean_shift.shape[1]).astype(np.uint8)
+	
 	h_km, s_km, v_km = cv2.split(k_means_image)
 
 	if plot:
@@ -210,27 +208,25 @@ def color_quantization(path, exe_median_cut=True, plot=False):
 		fig.tight_layout()
 		plt.show()
 	
-	# fig.savefig(save_path, dpi=100)
 	segmentation_image = seperate_layers(k_means_image)
 	
-	# num_layers = len(segmentation_image)
-	num_layers = 0
-	current_dir = os.getcwd()
-	file_name = path.split('/')[-3]
-	image_quantization_result_dir = str(Path(current_dir).parent) + '/image_generator/' + file_name + \
-									'/color_quantization_result_batches/' + str(num_layers) + '_layer/'
-	
-	if not os.path.exists(image_quantization_result_dir):
-		os.makedirs(image_quantization_result_dir)
-		print("Directory ", image_quantization_result_dir, " Created ")
-	else:
-		print("Directory ", image_quantization_result_dir, " already exists")
-	
-	save_path = image_quantization_result_dir + image_file_name + '.jpg'
-	
-	# Save image into jpg file
-	im = Image.fromarray(segmentation_image[num_layers])
-	im.save(save_path)
+	for nl in range(1, len(segmentation_image)):
+		current_dir = os.getcwd()
+		file_name = path.split('/')[-3]
+		image_quantization_result_dir = str(Path(current_dir).parent) + '/image_generator/' + file_name + \
+										'/color_quantization_result_batches/' + str(nl) + '_layer/'
+		
+		if not os.path.exists(image_quantization_result_dir):
+			os.makedirs(image_quantization_result_dir)
+			print("Directory ", image_quantization_result_dir, " Created ")
+		else:
+			print("Directory ", image_quantization_result_dir, " already exists")
+		
+		save_path = image_quantization_result_dir + image_file_name + '.jpg'
+		
+		# Save image into jpg file
+		im_background = Image.fromarray(segmentation_image[list(segmentation_image.keys())[nl]])
+		im_background.save(save_path)
 	return segmentation_image
 
 
@@ -246,6 +242,7 @@ def seperate_layers(image, plot=True):
 					image_blank[z][i][j] = np.array([255, 255, 255])
 	
 	# Classification layers through
+	# image_type = {'Original_image': None, 'red_legend': None, 'edge': None, 'black_text': None, 'background': None}
 	image_type = {'Original_image': None, 'red_legend': None, 'black_text': None, 'background': None}
 	number_zeros_pixels = []
 	for index, img in enumerate(image_blank):
@@ -259,18 +256,19 @@ def seperate_layers(image, plot=True):
 	image_type['Original_image'] = image
 	image_type['background'] = image_blank[number_zeros_pixels[0][0]]
 	image_type['black_text'] = image_blank[number_zeros_pixels[1][0]]
+	# image_type['edge'] = image_blank[number_zeros_pixels[2][0]]
 	image_type['red_legend'] = image_blank[number_zeros_pixels[2][0]]
 	
 	if plot:
 		fig = plt.figure(figsize=(25, 25))
 		
 		for index, (type, image) in enumerate(image_type.items()):
-			ax = fig.add_subplot(2, 2, index+1)
+			ax = fig.add_subplot(3, 2, index+1)
 			ax.imshow(image)
 			ax.axis('off')
 			ax.set_title('%s_layers ' % type)
 		plt.show()
-	return image_blank
+	return image_type
 
 
 # histogram analysis of color space
@@ -290,7 +288,7 @@ def histogram_color_space(path):
 	ax.legend(['Total', 'Red_Channel', 'Green_Channel', 'Blue_Channel'])
 	
 	ax = fig.add_subplot(2, 1, 2)
-	image_HSL = cv2.cvtColor(image_BGR, cv2.COLOR_BGR2HLS)
+	image_HSL = cv2.cvtColor(image_BGR, cv2.COLOR_BGR2HSV)
 	ax.hist(image_HSL.ravel(), bins=256, color='orange', )
 	ax.hist(image_HSL[:, :, 0].ravel(), bins=256, color='red', alpha=0.5)
 	ax.hist(image_HSL[:, :, 1].ravel(), bins=256, color='Green', alpha=0.5)
