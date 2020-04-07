@@ -298,14 +298,3 @@ def histogram_color_space(path):
 	ax.legend(['Total', 'Hue_Channel', 'Lightning_Channel', 'Saturation_Channel'])
 	
 	plt.show()
-	
-
-if __name__ == "__main__":
-	# path = '/home/yizi/Documents/phd/historical_map_project/image_generator/_01_01/image_batches/'
-	# file_names = os.listdir(path)
-	# for file in file_names:
-	# 	file_path = path + file
-	# 	quant_image = color_quantization(file_path)
-	
-	path = '/home/yizi/Documents/phd/historical_map_project/test/BHdV_PL_ATL20Ardt_1929_0003.jpg'
-	histogram_color_space(path)
