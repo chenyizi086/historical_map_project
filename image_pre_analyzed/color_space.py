@@ -315,7 +315,7 @@ def color_quantization_initial_centroid(path):
 	
 	# segmentation_image = seperate_layers(recreate_image)
 	
-	for nl in range(1, len(segmentation_image)):
+	for nl in range(len(segmentation_image)):
 		current_dir = os.getcwd()
 		file_name = path.split('/')[-3]
 		image_quantization_result_dir = str(Path(current_dir).parent) + '/image_generator/' + file_name + \
@@ -347,7 +347,6 @@ def seperate_layers(image, plot=True):
 					image_blank[z][i][j] = np.array([255, 255, 255])
 	
 	# Classification layers through
-	# image_type = {'Original_image': None, 'red_legend': None, 'edge': None, 'black_text': None, 'background': None}
 	image_type = {'Original_image': None, 'red_legend': None, 'black_text': None, 'background': None}
 	number_zeros_pixels = []
 	for index, img in enumerate(image_blank):

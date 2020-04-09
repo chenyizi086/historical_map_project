@@ -9,7 +9,7 @@ if __name__ == '__main__':
 	# 0. Slice and save images
 	path = '/home/yizi/Documents/phd/historical_map_project/test/'
 	create_save_image_batches(path, batch_size=(1000, 1000))
-	
+
 	# 1. quantization
 	path = '/home/yizi/Documents/phd/historical_map_project/image_generator/BHdV_PL_ATL20Ardt_1929_0003/image_batches/'
 	file_names = os.listdir(path)

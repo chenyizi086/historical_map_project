@@ -30,7 +30,7 @@ def color_picker(img):
 				else:
 					print('Please select color of %s layer' % (str(list(select_color.keys())[index])))
 			else:
-				pass
+				print('Job done, please press 0')
 		if event == cv2.EVENT_LBUTTONDBLCLK:
 			if index < len(select_color):
 				red = img[y, x, 2]
@@ -43,12 +43,13 @@ def color_picker(img):
 				select_color[list(select_color.keys())[index]] = (red, green, blue)
 				print('Assign color %s to %s layer' % (str(select_color[list(select_color.keys())[index]]), str(list(select_color.keys())[index])))
 				index += 1
+				print(index)
 				if index == len(select_color):
 					print('Job done, please press 0')
 				else:
 					print('Please select color of %s layer' % (str(list(select_color.keys())[index])))
 			else:
-				pass
+				print('Job done, please press 0')
 
 	cv2.imshow("image", img)
 	print('Please select color of %s layer' %(str(list(select_color.keys())[index])))
@@ -58,6 +59,8 @@ def color_picker(img):
 	cv2.waitKey(0)
 	
 	cv2.destroyAllWindows()
+	
+	index = 0
 	
 	return select_color
 

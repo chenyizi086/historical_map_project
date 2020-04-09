@@ -89,7 +89,7 @@ def join_image_batches(path):
 		for t in tiles:
 			with open(join_image_bath_path+t.filename.split('/')[-1].split('.')[0]+'.p', 'rb') as handle:
 				image_array = pickle.load(handle)
-			t.image = Image.fromarray(image_array)
+			t.image = Image.fromarray(image_array.astype(np.uint8))
 			t.filename = join_image_bath_path+t.filename.split('/')[-1]
 		
 		image_join_dir_path = path + 'color_quantization_result_join/' + os.listdir(image_batches_path)[index-1] + '/'
