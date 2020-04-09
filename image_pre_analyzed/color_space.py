@@ -3,6 +3,7 @@ import os
 from pathlib import Path
 import operator
 import pickle
+import numba as nb
 
 import matplotlib.pyplot as plt
 from matplotlib import colors
@@ -12,6 +13,8 @@ from statistics import mean
 from PIL import Image
 from sklearn.cluster import MeanShift, estimate_bandwidth, KMeans
 from copy import deepcopy
+
+from color_picker_tool.color_picker import color_picker
 
 
 class ColorCube(object):
@@ -71,6 +74,19 @@ def median_cut(img, num_colors, unique=False):
 	return [c.average() for c in cubes]
 
 
+# Recreate image
+def recreate_image(codebook, labels, w, h):
+	"""Recreate the (compressed) image from the code book & labels"""
+	d = codebook.shape[1]
+	image = np.zeros((w, h, d))
+	label_idx = 0
+	for i in range(w):
+		for j in range(h):
+			image[i][j] = codebook[labels[label_idx]]
+			label_idx += 1
+	return image
+
+
 def color_quantization(path, exe_median_cut=True, plot=True):
 	# Read image by cv2
 	image = cv2.imread(path)
@@ -80,23 +96,11 @@ def color_quantization(path, exe_median_cut=True, plot=True):
 	image = cv2.cvtColor(image, cv2.COLOR_BGR2HLS)
 	image = np.array(image)  # Change image objects into array
 	
-	# Mean shift
-	def recreate_image(codebook, labels, w, h):
-		"""Recreate the (compressed) image from the code book & labels"""
-		d = codebook.shape[1]
-		image = np.zeros((w, h, d))
-		label_idx = 0
-		for i in range(w):
-			for j in range(h):
-				image[i][j] = codebook[labels[label_idx]]
-				label_idx += 1
-		return image
-
 	# The following bandwidth can be automatically detected using
 	image_reshape = image.reshape((image.shape[0] * image.shape[1], image.shape[2]))
 	bandwidth = estimate_bandwidth(image_reshape, quantile=0.2, n_samples=500)
 	
-	ms = MeanShift(bandwidth=bandwidth, bin_seeding=True)
+	ms = MeanShift(bandwidth=bandwidth, bin_seeding=True, n_jobs=10)
 	ms.fit(image_reshape)
 	labels = ms.predict(image_reshape)
 	
@@ -184,14 +188,13 @@ def color_quantization(path, exe_median_cut=True, plot=True):
 		
 	# K-Means
 	image_kmeans = image_mean_shift.reshape((image_mean_shift.shape[0] * image_mean_shift.shape[1], image_mean_shift.shape[2]))
-	kmeans = KMeans(n_clusters=3, random_state=0).fit(image_kmeans)
+	kmeans = KMeans(n_clusters=3, random_state=0, n_jobs=10).fit(image_kmeans)
 	labels = kmeans.predict(image_kmeans)
 	print("Reduce color through K-means: %d" % len(list(set(labels.flatten()))))
 	
 	cluster_centers = kmeans.cluster_centers_.astype(np.uint8)
 	image_mean_shift = image_mean_shift.astype(np.uint8)
 	k_means_image = recreate_image(cluster_centers, labels, image_mean_shift.shape[0], image_mean_shift.shape[1]).astype(np.uint8)
-	
 	h_km, s_km, v_km = cv2.split(k_means_image)
 
 	if plot:
@@ -227,12 +230,109 @@ def color_quantization(path, exe_median_cut=True, plot=True):
 		
 		# Save image into pickle file for saving memeory
 		with open(save_path, 'wb') as handle:
-			pickle.dump(segmentation_image[list(segmentation_image.keys())[nl]],
-						handle, protocol=pickle.HIGHEST_PROTOCOL)
+			pickle.dump(segmentation_image[list(segmentation_image.keys())[nl]], handle, protocol=pickle.HIGHEST_PROTOCOL)
 		
 		# sep_image = Image.fromarray(segmentation_image[list(segmentation_image.keys())[nl]])
 		# sep_image.save(save_path, format='RGB')
 	return segmentation_image
+
+
+def color_quantization_initial_centroid(path):
+	# Recreate image
+	def recreate_image(codebook, labels, w, h):
+		"""Recreate the (compressed) image from the code book & labels"""
+		d = codebook.shape[1]
+		image = np.zeros((w, h, d))
+		label_idx = 0
+		for i in range(w):
+			for j in range(h):
+				image[i][j] = codebook[labels[label_idx]]
+				label_idx += 1
+		return image
+		
+	# Read image by cv2
+	image = cv2.imread(path)
+	image_file_name = os.path.basename(path).split('.')[0]
+	
+	# Change color space from BGR to RGB to HLS
+	image = cv2.cvtColor(image, cv2.COLOR_BGR2HLS)
+	image = np.array(image)  # Change image objects into array
+	
+	# The following bandwidth can be automatically detected using
+	image_reshape = image.reshape((image.shape[0] * image.shape[1], image.shape[2]))
+	bandwidth = estimate_bandwidth(image_reshape, quantile=0.2, n_samples=500)
+	
+	ms = MeanShift(bandwidth=bandwidth, bin_seeding=True, n_jobs=10)
+	ms.fit(image_reshape)
+	labels = ms.predict(image_reshape)
+	cluster_centers = ms.cluster_centers_.astype(np.uint8)
+	
+	labels_unique = np.unique(labels)
+	n_clusters_ = len(labels_unique)
+	
+	image = recreate_image(cluster_centers, labels, image.shape[0], image.shape[1]).astype(np.uint8)
+	print("Reduce color through mean-shift: %d" % n_clusters_)
+	image_reshape = image.reshape(image.shape[0]*image.shape[1], image.shape[2])
+	# 1. Pick color
+	select_color = color_picker(image)
+	print(select_color)
+	
+	@nb.njit
+	def euc(a, b):
+		return ((b - a) ** 2).sum(axis=0) ** 0.5
+	
+	segmentation_image = {key: None for key in list(select_color.keys())}
+	for key, value in select_color.items():
+		image_copy = image.copy()
+		if list(value) == list(np.array([0, 0, 0])):
+			segmentation_image[key] = np.zeros((image_copy.shape[0], image_copy.shape[1], image_copy.shape[2]))
+		image_copy = image_copy == value
+		image_copy = image_copy.astype(np.uint8)*(255, 255, 255)
+		segmentation_image[key] = image_copy
+	
+	fig = plt.figure(figsize=(25, 25))
+	
+	for index, (layer, seg_image) in enumerate(segmentation_image.items()):
+		ax = fig.add_subplot(2, 2, index + 1)
+		ax.imshow(seg_image)
+		ax.axis('off')
+		ax.set_title(' %s _layer' % layer)
+	plt.show()
+	
+	# label = []
+	# ecu_dist = []
+	# for i in image_reshape:
+	# 	for s in selected_centroid:
+	# 		ecu_dist.append(euc(i, s))
+	# 	label.append(np.argmin(ecu_dist))
+	# 	ecu_dist = []
+	#
+	# image = image.astype(np.uint8)
+	# recreate_image = recreate_image(selected_centroid, label, image.shape[0], image.shape[1]).astype(np.uint8)
+	#
+	# plt.imshow(recreate_image)
+	# plt.show()
+	
+	# segmentation_image = seperate_layers(recreate_image)
+	
+	for nl in range(1, len(segmentation_image)):
+		current_dir = os.getcwd()
+		file_name = path.split('/')[-3]
+		image_quantization_result_dir = str(Path(current_dir).parent) + '/image_generator/' + file_name + \
+										'/color_quantization_result_batches/' + str(nl) + '_layer/'
+
+		if not os.path.exists(image_quantization_result_dir):
+			os.makedirs(image_quantization_result_dir)
+			print("Directory ", image_quantization_result_dir, " Created ")
+		else:
+			print("Directory ", image_quantization_result_dir, " already exists")
+
+		save_path = image_quantization_result_dir + image_file_name + '.p'
+
+		# Save image into pickle file for saving memeory
+		with open(save_path, 'wb') as handle:
+			pickle.dump(segmentation_image[list(segmentation_image.keys())[nl]],
+						handle, protocol=pickle.HIGHEST_PROTOCOL)
 
 
 def seperate_layers(image, plot=True):
