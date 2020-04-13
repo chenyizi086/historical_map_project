@@ -174,14 +174,6 @@ def color_quantization(path, exe_median_cut=True, plot=True):
 										  image_mean_shift.shape[0], image_mean_shift.shape[1]).astype(np.uint8)
 		
 		image_median_cut_h, image_median_cut_l, image_median_cut_s = cv2.split(image_median_cut)
-		
-		# fig = plt.figure()
-		# ax = fig.add_subplot(1, 1, 1, projection='3d')
-		# ax.scatter(image_median_cut_h.flatten(), image_median_cut_l.flatten(), image_median_cut_s.flatten())
-		#
-		# ax.set_xlabel("Hue")
-		# ax.set_ylabel("Saturation")
-		# ax.set_zlabel("Value")
 
 		print("Reduce color through median cut: %d" % len(list(set(image_median_cut_label.flatten()))))
 		image_mean_shift = image_median_cut
@@ -231,13 +223,10 @@ def color_quantization(path, exe_median_cut=True, plot=True):
 		# Save image into pickle file for saving memeory
 		with open(save_path, 'wb') as handle:
 			pickle.dump(segmentation_image[list(segmentation_image.keys())[nl]], handle, protocol=pickle.HIGHEST_PROTOCOL)
-		
-		# sep_image = Image.fromarray(segmentation_image[list(segmentation_image.keys())[nl]])
-		# sep_image.save(save_path, format='RGB')
 	return segmentation_image
 
 
-def color_quantization_initial_centroid(path):
+def color_quantization_click_and_select(path):
 	# Recreate image
 	def recreate_image(codebook, labels, w, h):
 		"""Recreate the (compressed) image from the code book & labels"""
@@ -283,15 +272,21 @@ def color_quantization_initial_centroid(path):
 	
 	segmentation_image = {key: None for key in list(select_color.keys())}
 	for key, value in select_color.items():
-		image_copy = image.copy()
+		image_copy = image.copy().astype(np.uint8)
 		if list(value) == list(np.array([0, 0, 0])):
-			segmentation_image[key] = np.zeros((image_copy.shape[0], image_copy.shape[1], image_copy.shape[2]))
-		image_copy = image_copy == value
-		image_copy = image_copy.astype(np.uint8)*(255, 255, 255)
-		segmentation_image[key] = image_copy
-	
+			segmentation_image[key] = np.zeros((image.shape[0], image.shape[1], image.shape[2]))
+		
+		# Define the color you're looking for
+		pattern = np.array(value).astype(np.uint8)
+		
+		# Make a mask to use with where
+		mask = (image_copy == pattern).all(axis=2)
+		newshape = mask.shape + (1,)
+		mask = mask.reshape(newshape)
+		image_copy = np.where(mask, [255, 255, 255], [0, 0, 0])
+		segmentation_image[key] = image_copy.astype(np.uint8)
+		
 	fig = plt.figure(figsize=(25, 25))
-	
 	for index, (layer, seg_image) in enumerate(segmentation_image.items()):
 		ax = fig.add_subplot(2, 2, index + 1)
 		ax.imshow(seg_image)

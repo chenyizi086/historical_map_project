@@ -2,9 +2,19 @@ import numpy as np
 import time
 import multiprocessing as mp
 from functools import partial
+import pickle
+import os
+from pathlib import Path
 
 import cv2.cv2 as cv2
 import matplotlib.pyplot as plt
+
+
+def scale(X, x_min, x_max):
+	nom = (X-X.min(axis=0))*(x_max-x_min)
+	denom = X.max(axis=0) - X.min(axis=0)
+	denom[denom == 0] = 1
+	return x_min + nom/denom
 
 
 def pixel_overlap_percentage(image, line_segment, overlap_threshold=0.8):
@@ -24,63 +34,45 @@ def pixel_overlap_percentage(image, line_segment, overlap_threshold=0.8):
 	x2 = int(x0 - 1000 * (-b))
 	y2 = int(y0 - 1000 * (a))
 	
-	img_line = cv2.line(blank_image_gray, (x1, y1), (x2, y2), 1, 2)
+	img_line = cv2.line(blank_image_gray, (x1, y1), (x2, y2), 1, 1)
 	img_overlap = np.logical_and(img_line, image).astype(np.uint8)
 	
 	# Calculate overlapped pixel percentage
-	number_original_pixels = list(img_line.flatten()).count(1)
-	number_overlapped_pixels = list(img_overlap.flatten()).count(1)
-	percentage = number_overlapped_pixels / number_original_pixels
+	number_horizontal_pixels = image.shape[0]
 	
-	if percentage > overlap_threshold:
+	# number_original_pixels = list(img_line.flatten()).count(1)
+	number_overlapped_pixels = list(img_overlap.flatten()).count(1)
+	percentage = number_overlapped_pixels / number_horizontal_pixels
+	
+	if overlap_threshold <= percentage <= 1:
 		line = ((x1, y1), (x2, y2))
 	else:
 		line = None
 	return line
-
-
-def pixel_overlap_percentage_probability(image, line_segment, overlap_threshold=0.8):
-	# Detecting horizontal and vertical lines in the images.
-	blank_image_gray = np.zeros((image.shape[0], image.shape[1]), dtype=np.uint8)
-	x1, y1, x2, y2 = line_segment[0]
-	img_line = cv2.line(blank_image_gray, (x1, y1), (x2, y2), 1, 2)
-	img_overlap = np.logical_and(img_line, image).astype(np.uint8)
-	
-	# Calculate overlapped pixel percentage
-	number_original_pixels = list(img_line.flatten()).count(1)
-	number_overlapped_pixels = list(img_overlap.flatten()).count(1)
-	percentage = number_overlapped_pixels / number_original_pixels
-	
-	if percentage > overlap_threshold:
-		line = ((x1, y1), (x2, y2))
-	else:
-		line = None
-	return line
-
-
-def filter_lines(image, line_segment):
-	fil_lines = []
-	output_image_gray = np.zeros((image.shape[0], image.shape[1]), dtype=np.uint8)
-	for l in line_segment:
-		x1, y1, x2, y2 = l[0]
-		theta = (y2 - y1) / (x2 - x1)
-		if (np.pi / 2) - 0.02 < theta < (np.pi / 2) + 0.02 or - 0.02 < theta < +0.02:
-			fil_lines.append(l[0])
-			cv2.line(output_image_gray, (l[0][0], l[0][1]), (l[0][2], l[0][3]), 1, 2)
-	plt.imshow(output_image_gray)
-	plt.show()
-	return fil_lines
 	
 
 # Detect longitude and latitude
-def detect_longitude_latitude(gray_image):
+def detect_longitude_latitude(image_path):
 	print('Start detecting longitude and latitude')
+	image = pickle.load(open(image_path, "rb"))
+	
+	gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+	
+	# Invert gray scale image
+	gray_image = 255 - np.array(gray_image)
+	gray_image = scale(gray_image, 0, 1).astype(np.uint8)
+	
+	gray_image_copy = gray_image.copy()
+	
 	# Detecting horizontal and vertical lines in the images.
 	output_image_gray = np.zeros((gray_image.shape[0], gray_image.shape[1]), dtype=np.uint8)
 	
 	# Hough transform
-	horizontal_lines = cv2.HoughLines(gray_image, 1, np.pi / 180, 200, min_theta=(np.pi / 2) - 0.02, max_theta=(np.pi / 2)+0.02)
-	vertical_lines = cv2.HoughLines(gray_image, 1, np.pi / 180, 200, min_theta=-0.02, max_theta=0.02)
+	horizontal_lines = cv2.HoughLines(gray_image_copy, 1, np.pi / 180, 200, min_theta=(np.pi / 2)-0.02, max_theta=(np.pi / 2)+0.02)
+	vertical_lines_1 = cv2.HoughLines(gray_image_copy, 1, np.pi / 180, 200, min_theta=-0.02, max_theta=0.02)
+	vertical_lines_2 = cv2.HoughLines(gray_image_copy, 1, np.pi / 180, 200, min_theta=np.pi-0.02, max_theta=np.pi)
+	
+	vertical_lines = np.concatenate((vertical_lines_1, vertical_lines_2), axis=0)
 	
 	no_lines = False
 	if horizontal_lines is None:
@@ -96,6 +88,7 @@ def detect_longitude_latitude(gray_image):
 			selected_lines = horizontal_lines
 			print('Not found any vertical lines')
 		else:
+			# Cocatenated line change data shape
 			selected_lines = np.concatenate((horizontal_lines, vertical_lines), axis=0)
 	
 	if not(no_lines):
@@ -124,26 +117,71 @@ def detect_longitude_latitude(gray_image):
 	fig = plt.figure(figsize=(25, 25))
 	
 	ax = fig.add_subplot(1, 2, 1)
-	ax.imshow(gray_image)
+	ax.imshow(gray_image, cmap='gray')
 	ax.axis('off')
 	ax.set_title('Orignal gray-scale image')
 	
 	ax = fig.add_subplot(1, 2, 2)
-	ax.imshow(output_image_gray)
+	ax.imshow(output_image_gray, 'gray')
 	ax.axis('off')
 	ax.set_title('Extracted longitude and latitude')
 	plt.show()
+	
+	current_dir = os.getcwd()
+	image_name = image_path.split('/')[-4]
+	file_name = image_path.split('/')[-1]
+	image_quantization_result_dir = str(Path(current_dir).parent) + '/image_generator/' + image_name + \
+									'/color_quantization_result_batches/' + 'logitude_and_latitude/'
+
+	if not os.path.exists(image_quantization_result_dir):
+		os.makedirs(image_quantization_result_dir)
+		print("Directory ", image_quantization_result_dir, " Created ")
+	else:
+		print("Directory ", image_quantization_result_dir, " already exists")
+
+	save_path = image_quantization_result_dir + file_name
+
+	# Save image into pickle file for saving memeory
+	output_image_gray = scale(output_image_gray, 0, 255).astype(np.uint8)
+	output_image_gray = cv2.cvtColor(output_image_gray, cv2.COLOR_GRAY2RGB)
+	with open(save_path, 'wb') as handle:
+		pickle.dump(output_image_gray, handle, protocol=pickle.HIGHEST_PROTOCOL)
+	
 	return output_image_gray
 
 
-if __name__ == '__main__':
-	image = cv2.imread('/home/yizi/Documents/phd/historical_map_project/image_generator/BHdV_PL_ATL20Ardt_1929_0003/color_quantization_result_join/3_layer/3_layer.tif')
+def detect_longitude_latitude_morph(gray_image):
+	print('Start detecting longitude and latitude by usign morphologic method')
 
-	gray_scale_image = cv2.bitwise_not(image)
-	gray_scale_image = cv2.cvtColor(gray_scale_image, cv2.COLOR_BGR2GRAY)
-	gray_scale_image = np.array(gray_scale_image)  # Change image objects into array
+	horizontal = np.copy(gray_image)
+	vertical = np.copy(gray_image)
 	
-	gray_scale_image_1 = gray_scale_image[500:1000, 500:1000]
-	plt.imshow(gray_scale_image_1, cmap='gray')
+	# Specify size on horizontal axis
+	cols = horizontal.shape[1]
+	horizontal_size = 5
+	
+	# Create structure element for extracting horizontal lines through morphology operations
+	horizontalStructure = cv2.getStructuringElement(cv2.MORPH_RECT, (horizontal_size, 1))
+	
+	# Apply morphology operations
+	horizontal = cv2.erode(horizontal, horizontalStructure)
+	# horizontal = cv2.dilate(horizontal, horizontalStructure)
+	
+	plt.imshow(horizontal)
 	plt.show()
-	gray_image = detect_longitude_latitude(gray_scale_image_1)
+	print()
+	
+
+if __name__ == '__main__':
+	# image = cv2.imread('../image_generator/BHdV_PL_ATL20Ardt_1929_0003/color_quantization_result_join/0_layer/0_layer.tif')
+	
+	# image = pickle.load(open('/home/yizi/Documents/phd/historical_map_project/image_generator/BHdV_PL_ATL20Ardt_1929_0003/color_quantization_result_batches/0_layer/_01_02.p', "rb"))
+	image_path = '/home/yizi/Documents/phd/historical_map_project/image_generator/BHdV_PL_ATL20Ardt_1929_0003/color_quantization_result_batches/0_layer/_01_02.p'
+	# gray_scale_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+	#
+	# # Invert gray scale image
+	# gray_scale_image = 255 - np.array(gray_scale_image)  # Change image objects into array
+	
+	# plt.imshow(gray_scale_image, cmap='gray')
+	# plt.show()
+	gray_image = detect_longitude_latitude(image_path)

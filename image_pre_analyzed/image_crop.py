@@ -29,14 +29,8 @@ def create_save_image_batches(path, batch_size=(1000, 1000)):
 	file_names = os.listdir(path)
 	
 	for file in file_names:
-		# Split path and get the filename
+		# Get the filename
 		file_index = file.split('.')[0]
-		# Create target directory & all intermediate directories if don't exists
-		if not os.path.exists(file_index):
-			os.makedirs(file_index)
-			print("Directory ", file_index, " Created ")
-		else:
-			print("Directory ", file_index, " already exists")
 		
 		# Read image check directory exist or not
 		dir_save_image_batch = str(Path(os.getcwd()).parent) + '/image_generator/' + str(file.split('.')[0]) + '/image_batches/'
@@ -55,12 +49,6 @@ def create_save_image_batches(path, batch_size=(1000, 1000)):
 		# Slice and save tiles
 		tiles = image_slicer.slice(file_orinal_image, batch_number, save=False)
 		
-		# Join the tiles
-		image = join(tiles)
-		
-		plt.imshow(image)
-		plt.show()
-		
 		# Save tile file in pickle
 		tile_path = str(Path(os.getcwd()).parent) + '/image_generator/' + file_index + '/tile_info/'
 		if not os.path.exists(tile_path):
@@ -70,7 +58,6 @@ def create_save_image_batches(path, batch_size=(1000, 1000)):
 			print("Directory ", tile_path, " already exists")
 
 		tile_file_path = tile_path + file_index + '_tile.p'
-		# / home / yizi / Documents / phd / historical_map_project / image_generator / BHdV_PL_ATL20Ardt_1929_0003 / tile_info
 		image_slicer.save_tiles(tiles, directory=dir_save_image_batch, format='JPEG')
 		pickle.dump(tiles, open(tile_file_path, "wb"))
 
@@ -84,15 +71,15 @@ def join_image_batches(path):
 	tiles = pickle.load(df)
 	image_batches_path = path + 'color_quantization_result_batches/'
 	
-	for index in range(1, len(os.listdir(image_batches_path))+1):
-		join_image_bath_path = image_batches_path + os.listdir(image_batches_path)[index-1] + '/'
+	for index in range(0, len(os.listdir(image_batches_path))):
+		join_image_bath_path = image_batches_path + os.listdir(image_batches_path)[index] + '/'
 		for t in tiles:
 			with open(join_image_bath_path+t.filename.split('/')[-1].split('.')[0]+'.p', 'rb') as handle:
 				image_array = pickle.load(handle)
 			t.image = Image.fromarray(image_array.astype(np.uint8))
 			t.filename = join_image_bath_path+t.filename.split('/')[-1]
 		
-		image_join_dir_path = path + 'color_quantization_result_join/' + os.listdir(image_batches_path)[index-1] + '/'
+		image_join_dir_path = path + 'color_quantization_result_join/' + os.listdir(image_batches_path)[index] + '/'
 		
 		if not os.path.exists(image_join_dir_path):
 			os.makedirs(image_join_dir_path)
@@ -101,7 +88,7 @@ def join_image_batches(path):
 			print("Directory ", image_join_dir_path, " already exists")
 		
 		# Uncompress data format 'tif'
-		image_join_file_dir = image_join_dir_path + os.listdir(image_batches_path)[index-1] + '.tif'
+		image_join_file_dir = image_join_dir_path + os.listdir(image_batches_path)[index] + '.tif'
 		
 		image_join = join(tiles)
 		image_join.save(image_join_file_dir)

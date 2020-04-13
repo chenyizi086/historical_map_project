@@ -1,25 +1,32 @@
 import os
 from pathlib import Path
 
-from color_space import color_quantization, color_quantization_initial_centroid
+from color_space import color_quantization_click_and_select
 from image_crop import create_save_image_batches, join_image_batches
+from map_object_detection import map_objects as mp
 
 
 if __name__ == '__main__':
 	# 0. Slice and save images
-	path = '/home/yizi/Documents/phd/historical_map_project/test/'
-	create_save_image_batches(path, batch_size=(1000, 1000))
-
+	# map_input_path = '../map_input/test'
+	# create_save_image_batches(map_input_path, batch_size=(1000, 1000))
+	
 	# 1. quantization
-	path = '/home/yizi/Documents/phd/historical_map_project/image_generator/BHdV_PL_ATL20Ardt_1929_0003/image_batches/'
-	file_names = os.listdir(path)
-	for file in file_names:
-		file_path = path + file
-		# Seperate different layers of the map with human intervention
-		color_quantization_initial_centroid(file_path)
-		# Seperate different layers of the map automatically
-		# quant_image = color_quantization(file_path, exe_median_cut=True)
-
-	# 3. Join and merge
-	current_dir = str(Path(os.getcwd()).parent) + '/image_generator/BHdV_PL_ATL20Ardt_1929_0003/'
-	join_image_batches(current_dir)
+	image_root_path = '../image_generator/'
+	for image_index in os.listdir(image_root_path):
+		batch_dir = image_root_path + image_index + '/image_batches/'
+		for file in os.listdir(batch_dir):
+			file_path = batch_dir + file
+			# Seperate different layers of the map with human intervention
+			# color_quantization_click_and_select(file_path)
+	
+		# 2. Extract horizontal and vertical lines
+		result_batch_path = image_root_path + image_index + '/color_quantization_result_batches/0_layer/'
+		img_name = os.listdir(result_batch_path)
+		for file in img_name:
+			file_path = result_batch_path + file
+			# output_image_gray = mp.detect_longitude_latitude(file_path)
+		
+		# 3. Join and merge
+		join_image_path = image_root_path + image_index + '/'
+		join_image_batches(join_image_path)
