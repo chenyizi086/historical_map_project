@@ -10,8 +10,8 @@ import cv2.cv2 as cv2
 import matplotlib.pyplot as plt
 
 
-def scale(X, x_min, x_max):
-	nom = (X-X.min(axis=0))*(x_max-x_min)
+def scale(x, x_min, x_max):
+	nom = (x-x.min(axis=0))*(x_max-x_min)
 	denom = X.max(axis=0) - X.min(axis=0)
 	denom[denom == 0] = 1
 	return x_min + nom/denom
