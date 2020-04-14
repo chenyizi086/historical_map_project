@@ -17,4 +17,5 @@ image_pre_analyzed/__pyache__
 # Ignore pyc file
 __pycache__/*.pyc
 
-
+# Remove .idea directory
+.idea/

@@ -9,7 +9,8 @@
       - [x] Median cut (option: for reducing the processing time of K-means)
       - [x] K-means
       - [ ] Add spatial information for clustering pixels (pixel coordinates in the images); pixels which are close have higher probability to be considered in the same cluster (TODO)
---------------------------------------------------------------------------------------------------------------------------
+
+
 - [ ] Maps segmentation
     - [x]  Seperate different layers of historical maps
       - [x] Classify layers automatically through the output of the K-means based on the number of ratio between black and white pixels (eg. background layers have the highest number of pixels (value of 0)) <br/>
