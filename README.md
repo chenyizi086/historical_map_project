@@ -9,6 +9,7 @@
       - [x] Median cut (option: for reducing the processing time of K-means)
       - [x] K-means
       - [ ] Add spatial information for clustering pixels (pixel coordinates in the images); pixels which are close have higher probability to be considered in the same cluster (TODO)
+--------------------------------------------------------------------------------------------------------------------------
 - [ ] Maps segmentation
     - [x]  Seperate different layers of historical maps
       - [x] Classify layers automatically through the output of the K-means based on the number of ratio between black and white pixels (eg. background layers have the highest number of pixels (value of 0)) <br/>
@@ -29,10 +30,11 @@
             Advantage: Fast<br/>
             Disadvantage: Erode and dilation might connect some unwanted pixels that cause false positive detection <br/>
             The best kernel filter requires to be set manually for different map resources (low generalizibility)
-			- [ ] Convolution based line detection method (TODO)
+      - [ ] Convolution based line detection method (TODO)
     - [ ]  Detect and remove text from the map 
-      - [ ] Text area detection (on going)
-				Issue: The text detector have bad results for detecting our map dataset. Becuase they are trained through english words then French words, a network fine tunning requires to be done
+      - [ ] Text area detection (on going) <br/>
+		Issue: The text detector have bad results for detecting our map dataset. <br/>
+		Becuase they are trained through english words then French words, a network fine tunning requires to be done
         - [x] EAST text detector
         - [ ] Textbox++ text detector (on going)
       - [ ] Text pixels identification and removal
