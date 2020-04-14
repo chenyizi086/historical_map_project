@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 
 def scale(x, x_min, x_max):
 	nom = (x-x.min(axis=0))*(x_max-x_min)
-	denom = X.max(axis=0) - X.min(axis=0)
+	denom = x.max(axis=0) - x.min(axis=0)
 	denom[denom == 0] = 1
 	return x_min + nom/denom
 
