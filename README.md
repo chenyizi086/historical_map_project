@@ -9,6 +9,7 @@
       - [x] Median cut (option: for reducing the processing time of K-means)
       - [x] K-means
       - [ ] Add spatial information for clustering pixels (pixel coordinates in the images); pixels which are close have higher probability to be considered in the same cluster (TODO)
+      - [] Deep neural network detection method (LS-Net)
 
 
 - [ ] Maps segmentation
