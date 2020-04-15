@@ -5,6 +5,7 @@
 - [ ] Color Quantization
   - [x] Choose the right color space (we use HSV -> more close to human perception)
   - [x] Color Quantization (3 steps)
+      - [x] Add (3*3) gaussian kernel to blur and smooth images
       - [x] Mean shift
       - [x] Median cut (option: for reducing the processing time of K-means)
       - [x] K-means
