@@ -8,6 +8,7 @@
       - [x] Mean shift
       - [x] Median cut (option: for reducing the processing time of K-means)
       - [x] K-means
+      - [x] Remove sea salt noise through connect component analysis
       - [ ] Add spatial information for clustering pixels (pixel coordinates in the images); pixels which are close have higher probability to be considered in the same cluster (TODO)
 
 - [ ] Maps segmentation
