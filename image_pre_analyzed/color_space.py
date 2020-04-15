@@ -152,6 +152,7 @@ def color_quantization(path, exe_median_cut=True, plot=True):
 		ax.set_ylabel("Saturation")
 		ax.set_zlabel("Value")
 		ax.set_title('Color space after mean-shift')
+
 	# Median cut
 	# There is no need to do median cut if there are not too many colors
 	if exe_median_cut:
@@ -240,29 +241,35 @@ def color_quantization_click_and_select(path):
 		return image
 		
 	# Read image by cv2
+	path = '/home/yizi/Documents/phd/historical_map_project/image_generator/BHdV_PL_ATL20Ardt_1929_0003/image_batches/_05_06.tiff'
 	image = cv2.imread(path)
+	
+	# Gaussian blur to smooth noise pixels
+	image = cv2.GaussianBlur(image, (3, 3), cv2.BORDER_DEFAULT)
 	image_file_name = os.path.basename(path).split('.')[0]
 	
 	# Change color space from BGR to RGB to HLS
 	image = cv2.cvtColor(image, cv2.COLOR_BGR2HLS)
 	image = np.array(image)  # Change image objects into array
-	
+
+	plt.imshow(image)
+	plt.show()
 	# The following bandwidth can be automatically detected using
 	image_reshape = image.reshape((image.shape[0] * image.shape[1], image.shape[2]))
-	bandwidth = estimate_bandwidth(image_reshape, quantile=0.2, n_samples=500)
-	
+	bandwidth = estimate_bandwidth(image_reshape, quantile=0.1, n_samples=500)
+
 	ms = MeanShift(bandwidth=bandwidth, bin_seeding=True, n_jobs=10)
 	ms.fit(image_reshape)
 	labels = ms.predict(image_reshape)
 	cluster_centers = ms.cluster_centers_.astype(np.uint8)
-	
+
 	labels_unique = np.unique(labels)
 	n_clusters_ = len(labels_unique)
-	
+
 	image = recreate_image(cluster_centers, labels, image.shape[0], image.shape[1]).astype(np.uint8)
+	
 	print("Reduce color through mean-shift: %d" % n_clusters_)
-	image_reshape = image.reshape(image.shape[0]*image.shape[1], image.shape[2])
-	# 1. Pick color
+
 	select_color = color_picker(image)
 	print(select_color)
 	
@@ -284,7 +291,13 @@ def color_quantization_click_and_select(path):
 		newshape = mask.shape + (1,)
 		mask = mask.reshape(newshape)
 		image_copy = np.where(mask, [255, 255, 255], [0, 0, 0])
-		segmentation_image[key] = image_copy.astype(np.uint8)
+		image_copy = image_copy.astype(np.uint8)
+		if key == 'red_legend' or key == 'black_text':
+			image_copy = remove_noise_pixels(image_copy, threshold=15)
+		else:
+			image_copy = cv2.bitwise_not(image_copy)
+			image_copy = remove_noise_pixels(image_copy, threshold=15)
+		segmentation_image[key] = image_copy
 		
 	fig = plt.figure(figsize=(25, 25))
 	for index, (layer, seg_image) in enumerate(segmentation_image.items()):
@@ -293,22 +306,6 @@ def color_quantization_click_and_select(path):
 		ax.axis('off')
 		ax.set_title(' %s _layer' % layer)
 	plt.show()
-	
-	# label = []
-	# ecu_dist = []
-	# for i in image_reshape:
-	# 	for s in selected_centroid:
-	# 		ecu_dist.append(euc(i, s))
-	# 	label.append(np.argmin(ecu_dist))
-	# 	ecu_dist = []
-	#
-	# image = image.astype(np.uint8)
-	# recreate_image = recreate_image(selected_centroid, label, image.shape[0], image.shape[1]).astype(np.uint8)
-	#
-	# plt.imshow(recreate_image)
-	# plt.show()
-	
-	# segmentation_image = seperate_layers(recreate_image)
 	
 	for nl in range(len(segmentation_image)):
 		current_dir = os.getcwd()
@@ -355,7 +352,6 @@ def seperate_layers(image, plot=True):
 	image_type['Original_image'] = image
 	image_type['background'] = image_blank[number_zeros_pixels[0][0]]
 	image_type['black_text'] = image_blank[number_zeros_pixels[1][0]]
-	# image_type['edge'] = image_blank[number_zeros_pixels[2][0]]
 	image_type['red_legend'] = image_blank[number_zeros_pixels[2][0]]
 	
 	if plot:
@@ -397,3 +393,30 @@ def histogram_color_space(path):
 	ax.legend(['Total', 'Hue_Channel', 'Lightning_Channel', 'Saturation_Channel'])
 	
 	plt.show()
+
+
+def remove_noise_pixels(image, threshold=10):
+	# Remove noise pixels by analysing the connected components in images
+	img = cv2.threshold(image, 0, 255, cv2.THRESH_BINARY)[1]  # ensure binary
+	img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+	
+	# getting ROIs with findContours
+	contours = cv2.findContours(img, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)[1]
+	for cnt in contours:
+		(x, y, w, h) = cv2.boundingRect(cnt)
+		ROI = image[y:y + h, x:x + w]
+		
+		if len(ROI) < threshold:
+			image[y:y + h, x:x + w] = 0
+		else:
+			pass
+	
+	# Morphology method to close the text
+	# kernel = np.ones((2, 2), np.uint8)
+	# image = cv2.morphologyEx(image, cv2.MORPH_CLOSE, kernel)
+	return image
+	
+
+if __name__ == '__main__':
+	file_path = '/home/yizi/Documents/phd/historical_map_project/map_input/test/BHdV_PL_ATL20Ardt_1929_0003.jpg'
+	color_quantization_click_and_select(file_path)

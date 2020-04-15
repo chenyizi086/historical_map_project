@@ -58,7 +58,7 @@ def create_save_image_batches(path, batch_size=(1000, 1000)):
 			print("Directory ", tile_path, " already exists")
 
 		tile_file_path = tile_path + file_index + '_tile.p'
-		image_slicer.save_tiles(tiles, directory=dir_save_image_batch, format='JPEG')
+		image_slicer.save_tiles(tiles, directory=dir_save_image_batch, format='TIFF')
 		pickle.dump(tiles, open(tile_file_path, "wb"))
 
 
