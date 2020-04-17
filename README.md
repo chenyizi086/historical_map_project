@@ -25,16 +25,18 @@
       - [x] Hough line transform
         - [x] Inverted images of background are used
         - [x] Use hough transform with selected theta value (90 degree, 0 degree and 180 degree) to detect horizontal and vertical lines from the maps and we measure the percentage of overlapped pixels between detected lines and overlapped pixels of the background<br/>
-              Advantage: This method is straight and simple <br/>
-              Disadvantage: The hough transform is slow and we need to set variety of threshold for different images to extract the right lines; <br/>
-              Broken lines and bad image quality influences the results of line extraction
+              Advantage: This method is straight-forward <br/>
+              Disadvantage: The hough transform is slow and we need to set variety of threshold for different images to extract the right lines <br/>
+              Broken lines and bad image quality influences the results of line extraction <br/>
+	      Problem: Due to the scanned issue, the logitude and latitude lines are sometimes not straingt lines, so only partially can be detected through this method <br/>
+      - [x] Add dynamic threshold method to filtered out the lines
       - [x] Morphologic method <br/>
             Advantage: Fast<br/>
             Disadvantage: Erode and dilation might connect some unwanted pixels that cause false positive detection <br/>
             The best kernel filter requires to be set manually for different map resources (low generalizibility)
       - [x] Filter out vertical and horizontal lines through edge by using sobel detector <br/>
       	    Result: Fail <br/>
-	    Reason: Due to the line overlapping in the image, part ot horizontal(or vertical lines) do not have strong edges that will cause line break <br/>
+	    Reason: Due to the line overlapping in the image, part ot horizontal(or vertical lines) do not have strong edges that will cause line break <br/> 
       - [ ] Deep neural network detection method (LS-Net) (Ongoing)
       - [ ] Evaluation the detected lines (Ongoing)
     - [ ]  Detect and remove text from the map 
