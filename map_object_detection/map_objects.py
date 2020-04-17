@@ -23,9 +23,7 @@ def pixel_overlap_percentage(image, line_segment):
 	blank_image_gray = np.zeros((image.shape[0], image.shape[1]), dtype=np.uint8)
 	
 	rho, theta = line_segment[0]
-	# Set threshold based on the angle theta
-	# if np.abs((np.pi / 2) - theta) < 0.02 or np.abs(0 - theta) < 0.02:
-	# if (np.pi / 2) - 0.02 < theta < (np.pi / 2) + 0.02 or - 0.02 < theta < 0.02:
+	
 	a = np.cos(theta)
 	b = np.sin(theta)
 	x0 = a * rho
@@ -48,7 +46,7 @@ def pixel_overlap_percentage(image, line_segment):
 	
 
 # Detect longitude and latitude
-def detect_longitude_latitude_hough_line_transform(image_path, threshold=0.7):
+def detect_longitude_latitude_hough_line_transform(image_path, threshold=0.6):
 	print('Start detecting longitude and latitude')
 	image = pickle.load(open(image_path, "rb"))
 	
@@ -65,11 +63,8 @@ def detect_longitude_latitude_hough_line_transform(image_path, threshold=0.7):
 	output_image_gray = np.zeros((gray_image.shape[0], gray_image.shape[1]), dtype=np.uint8)
 	
 	# Hough transform
-	horizontal_lines = cv2.HoughLines(gray_image_copy, 1, np.pi / 180, 200, min_theta=(np.pi / 2)-0.02, max_theta=(np.pi / 2)+0.02)
-	vertical_lines_1 = cv2.HoughLines(gray_image_copy, 1, np.pi / 180, 200, min_theta=-0.02, max_theta=0.02)
-	vertical_lines_2 = cv2.HoughLines(gray_image_copy, 1, np.pi / 180, 200, min_theta=np.pi-0.02, max_theta=np.pi)
-	
-	vertical_lines = np.concatenate((vertical_lines_1, vertical_lines_2), axis=0)
+	horizontal_lines = cv2.HoughLines(gray_image_copy, 1, np.pi / 180, 200, min_theta=(np.pi / 2)-0.01, max_theta=(np.pi / 2)+0.01)
+	vertical_lines = cv2.HoughLines(gray_image_copy, 1, np.pi / 180, 200, min_theta=-0.02, max_theta=0.02)
 	
 	no_lines = False
 	if horizontal_lines is None:
@@ -105,11 +100,26 @@ def detect_longitude_latitude_hough_line_transform(image_path, threshold=0.7):
 		print("\n")
 	
 		# Remove none value in list
+		lines = {l for l in lines if l}
 		lines = {l: p for (l, p) in lines}
 		max_percentage_line = max(list(lines.values()))
 		for l, l_p in lines.items():
 			if l_p >= max_percentage_line * threshold:
-				cv2.line(output_image_gray, l[0], l[1], 1, 2)
+				(x1, y1), (x2, y2) = l
+
+				k = (y2-y1)/(x2-x1)
+				b = y1 - k * x1
+
+				if 0 <= b <= image.shape[1]:
+					# y = kx + b
+					edge_point_1 = (0, int(y1 - k * x1))
+					edge_point_2 = (image.shape[1], int(k * image.shape[1] + b))
+				else:
+					# y = kx + b
+					edge_point_1 = (int((y1 - b)/k), 0)
+					edge_point_2 = (int((image.shape[0]-b)/k), image.shape[0])
+				
+				cv2.line(output_image_gray, edge_point_1, edge_point_2, 1, 2)
 			else:
 				pass
 		print(lines)
@@ -134,7 +144,6 @@ def detect_longitude_latitude_hough_line_transform(image_path, threshold=0.7):
 	image_quantization_result_dir = str(Path(current_dir).parent) + '/image_generator/' + image_name + \
 									'/color_quantization_result_batches/' + 'logitude_and_latitude/'
 	
-	
 	if not os.path.exists(image_quantization_result_dir):
 		os.makedirs(image_quantization_result_dir)
 		print("Directory ", image_quantization_result_dir, " Created ")
@@ -148,7 +157,6 @@ def detect_longitude_latitude_hough_line_transform(image_path, threshold=0.7):
 	output_image_gray = cv2.cvtColor(output_image_gray, cv2.COLOR_GRAY2RGB)
 	with open(save_path, 'wb') as handle:
 		pickle.dump(output_image_gray, handle, protocol=pickle.HIGHEST_PROTOCOL)
-	
 	return output_image_gray
 
 
@@ -180,7 +188,6 @@ def detect_longitude_latitude_convolution_based(image_path):
 	plt.imshow(horizontal_conv)
 	plt.show()
 	print()
-
 
 
 if __name__ == '__main__':
