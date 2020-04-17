@@ -8,6 +8,7 @@ from pathlib import Path
 
 import cv2.cv2 as cv2
 import matplotlib.pyplot as plt
+from scipy import signal
 
 
 def scale(x, x_min, x_max):
@@ -17,7 +18,7 @@ def scale(x, x_min, x_max):
 	return x_min + nom/denom
 
 
-def pixel_overlap_percentage(image, line_segment, overlap_threshold=0.8):
+def pixel_overlap_percentage(image, line_segment):
 	# Detecting horizontal and vertical lines in the images.
 	blank_image_gray = np.zeros((image.shape[0], image.shape[1]), dtype=np.uint8)
 	
@@ -40,26 +41,22 @@ def pixel_overlap_percentage(image, line_segment, overlap_threshold=0.8):
 	# Calculate overlapped pixel percentage
 	number_horizontal_pixels = image.shape[0]
 	
-	# number_original_pixels = list(img_line.flatten()).count(1)
 	number_overlapped_pixels = list(img_overlap.flatten()).count(1)
 	percentage = number_overlapped_pixels / number_horizontal_pixels
-	
-	if overlap_threshold <= percentage <= 1:
-		line = ((x1, y1), (x2, y2))
-	else:
-		line = None
-	return line
+	line = ((x1, y1), (x2, y2))
+	return line, percentage
 	
 
 # Detect longitude and latitude
-def detect_longitude_latitude(image_path):
+def detect_longitude_latitude_hough_line_transform(image_path, threshold=0.7):
 	print('Start detecting longitude and latitude')
 	image = pickle.load(open(image_path, "rb"))
 	
 	gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-	
+	plt.imshow(gray_image, cmap='gray')
+	plt.show()
 	# Invert gray scale image
-	gray_image = 255 - np.array(gray_image)
+	# gray_image = 255 - np.array(gray_image)
 	gray_image = scale(gray_image, 0, 1).astype(np.uint8)
 	
 	gray_image_copy = gray_image.copy()
@@ -108,9 +105,13 @@ def detect_longitude_latitude(image_path):
 		print("\n")
 	
 		# Remove none value in list
-		lines = [l for l in lines if l]
-		for l in lines:
-			cv2.line(output_image_gray, l[0], l[1], 1, 2)
+		lines = {l: p for (l, p) in lines}
+		max_percentage_line = max(list(lines.values()))
+		for l, l_p in lines.items():
+			if l_p >= max_percentage_line * threshold:
+				cv2.line(output_image_gray, l[0], l[1], 1, 2)
+			else:
+				pass
 		print(lines)
 		
 	# Draw lines
@@ -132,7 +133,8 @@ def detect_longitude_latitude(image_path):
 	file_name = image_path.split('/')[-1]
 	image_quantization_result_dir = str(Path(current_dir).parent) + '/image_generator/' + image_name + \
 									'/color_quantization_result_batches/' + 'logitude_and_latitude/'
-
+	
+	
 	if not os.path.exists(image_quantization_result_dir):
 		os.makedirs(image_quantization_result_dir)
 		print("Directory ", image_quantization_result_dir, " Created ")
@@ -148,3 +150,41 @@ def detect_longitude_latitude(image_path):
 		pickle.dump(output_image_gray, handle, protocol=pickle.HIGHEST_PROTOCOL)
 	
 	return output_image_gray
+
+
+def detect_longitude_latitude_convolution_based(image_path):
+	print('Start detecting longitude and latitude')
+	image = pickle.load(open(image_path, "rb"))
+
+	gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+	
+	# Invert gray scale image
+	gray_image = 255 - np.array(gray_image)
+	gray_image = scale(gray_image, 0, 1).astype(np.uint8)
+	
+	gray_image_copy = gray_image.copy()
+	kernel = np.ones((5, 5), np.float32) / 25
+	gray_image_copy = cv2.filter2D(gray_image_copy, -1, kernel)
+	plt.imshow(gray_image_copy)
+	plt.show()
+	
+	# Detecting horizontal and vertical lines in the images.
+	output_image_gray = np.zeros((gray_image.shape[0], gray_image.shape[1]), dtype=np.uint8)
+	
+	# Define vertical and horizontal kernel
+	vertical_kernel = np.array([-1, 2, -1, -1, 2, -1, -1, 2, -1]).reshape(3, 3).astype(np.uint8)
+	horizontal_kernel = np.array([-1, -1, -1, 2, 2, 2, -1, -1, -1]).reshape(3, 3).astype(np.uint8)
+	
+	horizontal_conv = signal.convolve2d(gray_image_copy, horizontal_kernel, boundary='symm', mode='same')
+	
+	plt.imshow(horizontal_conv)
+	plt.show()
+	print()
+
+
+
+if __name__ == '__main__':
+	# Test: _01_02;
+	image_path = '/home/yizi/Documents/phd/historical_map_project/image_generator/BHdV_PL_ATL20Ardt_1929_0003/color_quantization_result_batches/2_layer/_05_06.p'
+	# image_path = '/home/yizi/Documents/phd/historical_map_project/image_generator/BHdV_PL_ATL20Ardt_1929_0003/color_quantization_result_batches/0_layer/_01_02.p'
+	detect_longitude_latitude_hough_line_transform(image_path)
