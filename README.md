@@ -32,6 +32,9 @@
             Advantage: Fast<br/>
             Disadvantage: Erode and dilation might connect some unwanted pixels that cause false positive detection <br/>
             The best kernel filter requires to be set manually for different map resources (low generalizibility)
+      - [x] Filter out vertical and horizontal lines through edge by using sobel detector <br/>
+      	    Result: Fail <br/>
+	    Reason: Due to the line overlapping in the image, part ot horizontal(or vertical lines) do not have strong edges that will cause line break <br/>
       - [ ] Deep neural network detection method (LS-Net) (Ongoing)
       - [ ] Evaluation the detected lines (Ongoing)
     - [ ]  Detect and remove text from the map 
