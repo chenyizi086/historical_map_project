@@ -106,10 +106,8 @@ def detect_longitude_latitude_hough_line_transform(image_path, threshold=0.6):
 		for l, l_p in lines.items():
 			if l_p >= max_percentage_line * threshold:
 				(x1, y1), (x2, y2) = l
-
 				k = (y2-y1)/(x2-x1)
 				b = y1 - k * x1
-
 				if 0 <= b <= image.shape[1]:
 					# y = kx + b
 					edge_point_1 = (0, int(y1 - k * x1))
