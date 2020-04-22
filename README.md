@@ -5,7 +5,7 @@
 - [ ] Color Quantization
   - [x] Choose the right color space (we use HSV -> more close to human perception)
   - [x] Color Quantization (3 steps)
-      - [x] Add (3*3) gaussian kernel to blur and smooth images
+      - [x] Add (3*3) gaussian kernel to smooth images
       - [x] Mean shift
       - [x] Median cut (option: for reducing the processing time of K-means)
       - [x] K-means
@@ -37,12 +37,14 @@
       - [x] Filter out vertical and horizontal lines through edge by using sobel detector <br/>
       	    Result: Fail <br/>
 	    Reason: Due to the line overlapping in the image, part ot horizontal(or vertical lines) do not have strong edges that will cause line break <br/> 
-      - [ ] Deep neural network detection method (LS-Net) (Ongoing)
-      - [ ] Evaluation the detected lines (Ongoing)
+      - [x] Deep neural network detection method (LS-Net) <br/>
+      	    Disadvantage: Computational expensive + require ground truth to train the network<br/>
+      - [x] Evaluation the detected lines <br/>
+      	    Since the output of the line is represented as two coordinates, the way of evaluation the detected lines is to measure the distance of starting points and end points within predicted and ground truth lines. If the distance is lower than a preset thresholds, we consider it as a correct line prediction.
     - [ ]  Detect and remove text from the map 
       - [ ] Text area detection (on going) <br/>
 		Issue: The text detector have bad results for detecting our map dataset. <br/>
-		Becuase they are trained through english words then French words, a network fine tunning requires to be done
+		Becuase they are trained through english words then French words, a network fine tunning requires to be done to tackle this issue.
         - [x] EAST text detector
         - [ ] Textbox++ text detector (on going)
       - [ ] Text pixels identification and removal
