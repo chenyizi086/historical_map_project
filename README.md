@@ -41,7 +41,14 @@
       	    Disadvantage: Computational expensive + require ground truth to train the network<br/>
       - [x] Evaluation the detected lines <br/>
       	    Since the output of the line is represented as two coordinates, the way of evaluation the detected lines is to measure the distance of starting points and end points within predicted and ground truth lines. If the distance is lower than a preset thresholds, we consider it as a correct line prediction.
-    - [ ]  Detect and remove text from the map 
+    - [ ] Contour extraction
+    	- [ ] Define the type of contour that we want to extract <br/>
+	      **The building blocks**
+	- [ ] Create ground truth of contour
+	- [ ] Start from the most naive methods <br/>
+	      - [ ] Canny Edge detector<br/>
+	      - [ ] HED
+    - [ ]  Detect and remove text from the map (optional task)
       - [ ] Text area detection (on going) <br/>
 		Issue: The text detector have bad results for detecting our map dataset. <br/>
 		Becuase they are trained through english words then French words, a network fine tunning requires to be done to tackle this issue.
